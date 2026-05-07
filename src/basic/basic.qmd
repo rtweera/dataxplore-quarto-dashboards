@@ -1,0 +1,95 @@
+---
+title: "Basic Dashboard"
+format: dashboard
+orientation: columns
+jupyter: dataxplore-venv    # pin this env; not the default one
+---
+
+## Row 1 {height="40%"}
+
+### Column 1
+
+```{python}
+import pandas as pd
+import numpy as np
+import plotly.express as px
+
+# Sample data
+df = pd.DataFrame({
+    'x': np.arange(10),
+    'y': np.random.randn(10).cumsum()
+})
+
+fig = px.line(df, x='x', y='y', title='Line Chart')
+fig.show()
+```
+
+### Column 2
+
+```{python}
+# Bar chart sample
+categories = ['A', 'B', 'C', 'D', 'E']
+values = [10, 24, 36, 18, 22]
+
+fig = px.bar(
+    x=categories,
+    y=values,
+    title='Bar Chart',
+    labels={'x': 'Category', 'y': 'Value'}
+)
+fig.show()
+```
+
+## Row 2 {height="30%"}
+
+### Column 1
+
+```{python}
+# Scatter plot sample
+data = pd.DataFrame({
+    'x': np.random.randn(100),
+    'y': np.random.randn(100),
+    'category': np.random.choice(['Group A', 'Group B', 'Group C'], 100)
+})
+
+fig = px.scatter(
+    data,
+    x='x',
+    y='y',
+    color='category',
+    title='Scatter Plot'
+)
+fig.show()
+```
+
+### Column 2
+
+```{python}
+# Summary statistics
+total = len(df)
+mean_value = df['y'].mean()
+max_value = df['y'].max()
+
+stats = f"""
+- **Total Records**: {total}
+- **Mean Value**: {mean_value:.2f}
+- **Max Value**: {max_value:.2f}
+"""
+
+print(stats)
+```
+
+## Row 3 {height="30%"}
+
+### Column
+
+```{python}
+# Histogram
+fig = px.histogram(
+    data,
+    x='x',
+    title='Distribution of Values',
+    nbins=20
+)
+fig.show()
+```
