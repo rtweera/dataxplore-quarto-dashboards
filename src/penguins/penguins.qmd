@@ -1,0 +1,401 @@
+---
+title: "Palmer Penguins Dashboard"
+subtitle: "A modern view of species, morphology, and habitat patterns"
+format:
+  dashboard:
+    theme: flatly
+jupyter: dataxplore-venv
+execute:
+  warning: false
+  message: false
+---
+
+<style>
+:root {
+	--dashboard-bg: #f4f7fb;
+	--dashboard-panel: rgba(255, 255, 255, 0.92);
+	--dashboard-panel-border: rgba(20, 45, 65, 0.09);
+	--dashboard-ink: #15202b;
+	--dashboard-muted: #5e6b78;
+	--dashboard-accent: #2a6f97;
+	--dashboard-accent-2: #f28f3b;
+	--dashboard-accent-3: #4c956c;
+}
+
+body {
+	background:
+		radial-gradient(circle at top left, rgba(42, 111, 151, 0.10), transparent 30%),
+		radial-gradient(circle at top right, rgba(76, 149, 108, 0.10), transparent 28%),
+		linear-gradient(180deg, #f7f9fc 0%, var(--dashboard-bg) 100%);
+	color: var(--dashboard-ink);
+}
+
+.quarto-dashboard main {
+	padding-top: 1rem;
+}
+
+.quarto-dashboard .card {
+	border: 1px solid var(--dashboard-panel-border);
+	border-radius: 20px;
+	box-shadow: 0 14px 40px rgba(30, 50, 70, 0.08);
+	background: var(--dashboard-panel);
+	backdrop-filter: blur(8px);
+}
+
+.quarto-dashboard .card-body {
+	padding: 1rem 1.1rem;
+}
+
+.quarto-dashboard h1,
+.quarto-dashboard h2,
+.quarto-dashboard h3 {
+	letter-spacing: -0.02em;
+}
+
+.hero {
+	padding: 1.2rem 1.4rem;
+	border-radius: 24px;
+	background: linear-gradient(135deg, rgba(42, 111, 151, 0.95), rgba(76, 149, 108, 0.92));
+	color: white;
+	box-shadow: 0 18px 46px rgba(20, 50, 70, 0.18);
+}
+
+.hero h1 {
+	margin: 0;
+	font-size: 2.1rem;
+	font-weight: 800;
+}
+
+.hero p {
+	margin: 0.35rem 0 0;
+	max-width: 58rem;
+	color: rgba(255, 255, 255, 0.90);
+	font-size: 1.02rem;
+}
+
+.hero .tag {
+	display: inline-block;
+	margin-top: 0.85rem;
+	padding: 0.3rem 0.7rem;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.16);
+	color: rgba(255, 255, 255, 0.95);
+	font-size: 0.82rem;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.section-note {
+	color: var(--dashboard-muted);
+	font-size: 0.96rem;
+	margin-top: 0.25rem;
+}
+</style>
+
+```{python}
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from palmerpenguins import load_penguins
+
+px.defaults.template = "simple_white"
+px.defaults.color_discrete_sequence = ["#2a6f97", "#f28f3b", "#4c956c", "#c8553d"]
+
+penguins = load_penguins().copy()
+penguins = penguins.dropna(subset=[
+		"species",
+		"island",
+		"bill_length_mm",
+		"bill_depth_mm",
+		"flipper_length_mm",
+		"body_mass_g",
+		"sex",
+		"year",
+])
+
+penguins["species"] = pd.Categorical(
+		penguins["species"],
+		categories=["Adelie", "Chinstrap", "Gentoo"],
+		ordered=True,
+)
+penguins["island"] = pd.Categorical(
+		penguins["island"],
+		categories=["Biscoe", "Dream", "Torgersen"],
+		ordered=True,
+)
+penguins["sex"] = pd.Categorical(penguins["sex"], categories=["female", "male"], ordered=True)
+
+species_counts = penguins["species"].value_counts().reindex(["Adelie", "Chinstrap", "Gentoo"])
+island_counts = penguins["island"].value_counts().reindex(["Biscoe", "Dream", "Torgersen"])
+missing_counts = load_penguins().isna().sum().sort_values(ascending=False)
+
+summary = {
+		"records": len(penguins),
+		"species": penguins["species"].nunique(),
+		"islands": penguins["island"].nunique(),
+		"avg_mass": penguins["body_mass_g"].mean(),
+		"avg_flipper": penguins["flipper_length_mm"].mean(),
+}
+
+species_year = (
+		penguins.groupby(["year", "species"], observed=False)["body_mass_g"]
+		.mean()
+		.reset_index()
+)
+
+correlation = penguins[
+		["bill_length_mm", "bill_depth_mm", "flipper_length_mm", "body_mass_g"]
+].corr()
+
+species_island = (
+		penguins.groupby(["species", "island"], observed=False)
+		.size()
+		.reset_index(name="count")
+)
+
+species_sex = (
+		penguins.groupby(["species", "sex"], observed=False)
+		.size()
+		.reset_index(name="count")
+)
+
+ratio = penguins.assign(
+		bill_to_flipper=penguins["bill_length_mm"] / penguins["flipper_length_mm"]
+)
+``` 
+
+<div class="hero">
+<h1>Palmer Penguins Dashboard</h1>
+<p>Explore species composition, body morphology, island distribution, and relationships among the core Palmer Penguins measurements.</p>
+<span class="tag">Interactive • Clean • Data-driven</span>
+</div>
+
+## Overview
+
+### Column 1
+
+```{python}
+def indicator_card(value, title, suffix="", color="#2a6f97"):
+		fig = go.Figure(
+				go.Indicator(
+						mode="number",
+						value=value,
+						number={"suffix": suffix, "font": {"size": 40, "color": color}},
+						title={"text": title, "font": {"size": 15, "color": "#4e5d6c"}},
+				)
+		)
+		fig.update_layout(
+				height=180,
+				margin=dict(l=12, r=12, t=20, b=12),
+				paper_bgcolor="rgba(0,0,0,0)",
+				plot_bgcolor="rgba(0,0,0,0)",
+		)
+		return fig
+
+indicator_card(summary["records"], "Clean records", color="#2a6f97")
+```
+
+### Column 2
+
+```{python}
+indicator_card(summary["species"], "Species", color="#4c956c")
+```
+
+### Column 3
+
+```{python}
+indicator_card(summary["islands"], "Islands", color="#f28f3b")
+```
+
+### Column 4
+
+```{python}
+indicator_card(summary["avg_mass"], "Mean body mass", suffix=" g", color="#c8553d")
+```
+
+## Species and habitat
+
+### Column 1
+
+```{python}
+fig = px.bar(
+		species_counts.reset_index(),
+		x="species",
+		y="count",
+		text="count",
+		color="species",
+		color_discrete_sequence=["#2a6f97", "#f28f3b", "#4c956c"],
+		title="Species composition"
+)
+fig.update_traces(textposition="outside", cliponaxis=False)
+fig.update_layout(
+		height=360,
+		xaxis_title="",
+		yaxis_title="Count",
+		showlegend=False,
+		margin=dict(l=10, r=10, t=60, b=10),
+)
+fig
+```
+
+### Column 2
+
+```{python}
+species_island_plot = species_island.assign(
+    species=species_island["species"].astype(str),
+    island=species_island["island"].astype(str),
+)
+
+fig = px.treemap(
+		species_island_plot,
+		path=[px.Constant("Penguins"), "species", "island"],
+		values="count",
+		color="species",
+		color_discrete_sequence=["#2a6f97", "#f28f3b", "#4c956c"],
+		title="Species and island footprint"
+)
+fig.update_layout(height=360, margin=dict(l=10, r=10, t=60, b=10))
+fig
+```
+
+### Column 3
+
+```{python}
+fig = px.bar(
+		species_sex,
+		x="species",
+		y="count",
+		color="sex",
+		barmode="group",
+		color_discrete_map={"female": "#f28f3b", "male": "#2a6f97"},
+		title="Sex balance by species"
+)
+fig.update_layout(height=360, margin=dict(l=10, r=10, t=60, b=10), legend_title_text="sex")
+fig
+```
+
+## Morphology
+
+### Column 1
+
+```{python}
+fig = px.scatter(
+		penguins,
+		x="bill_length_mm",
+		y="bill_depth_mm",
+		color="species",
+		symbol="sex",
+		size="body_mass_g",
+		size_max=20,
+		opacity=0.82,
+		marginal_x="histogram",
+		marginal_y="histogram",
+		title="Bill length vs bill depth"
+)
+fig.update_layout(height=430, margin=dict(l=10, r=10, t=60, b=10))
+fig.update_xaxes(title="Bill length (mm)")
+fig.update_yaxes(title="Bill depth (mm)")
+fig
+```
+
+### Column 2
+
+```{python}
+fig = px.box(
+		penguins,
+		x="species",
+		y="body_mass_g",
+		color="species",
+		points="all",
+		title="Body mass distribution by species",
+		color_discrete_sequence=["#2a6f97", "#f28f3b", "#4c956c"],
+)
+fig.update_layout(height=430, margin=dict(l=10, r=10, t=60, b=10), showlegend=False)
+fig.update_yaxes(title="Body mass (g)")
+fig
+```
+
+## Time and relationships
+
+### Column 1
+
+```{python}
+fig = px.line(
+		species_year,
+		x="year",
+		y="body_mass_g",
+		color="species",
+		markers=True,
+		title="Average body mass over time",
+		color_discrete_sequence=["#2a6f97", "#f28f3b", "#4c956c"],
+)
+fig.update_layout(height=340, margin=dict(l=10, r=10, t=60, b=10))
+fig.update_yaxes(title="Mean body mass (g)")
+fig
+```
+
+### Column 2
+
+```{python}
+fig = px.imshow(
+		correlation.round(2),
+		text_auto=True,
+		color_continuous_scale=["#e8f1f8", "#8ecae6", "#2a6f97"],
+		title="Measurement correlation matrix",
+)
+fig.update_layout(height=340, margin=dict(l=10, r=10, t=60, b=10))
+fig
+```
+
+### Column 3
+
+```{python}
+fig = px.histogram(
+		penguins,
+		x="flipper_length_mm",
+		color="species",
+		barmode="overlay",
+		opacity=0.58,
+		nbins=24,
+		title="Flipper length distribution",
+		color_discrete_sequence=["#2a6f97", "#f28f3b", "#4c956c"],
+)
+fig.update_layout(height=340, margin=dict(l=10, r=10, t=60, b=10))
+fig.update_xaxes(title="Flipper length (mm)")
+fig.update_yaxes(title="Count")
+fig
+```
+
+## Data quality and derived signal
+
+### Column 1
+
+```{python}
+quality = pd.DataFrame({
+		"missing_values": missing_counts,
+		"missing_pct": (missing_counts / len(load_penguins()) * 100).round(1),
+})
+quality = quality[quality["missing_values"] > 0]
+quality.index.name = "field"
+quality
+```
+
+### Column 2
+
+```{python}
+ratio_fig = px.histogram(
+		ratio,
+		x="bill_to_flipper",
+		color="species",
+		nbins=26,
+		opacity=0.7,
+		title="Bill-to-flipper ratio",
+		color_discrete_sequence=["#2a6f97", "#f28f3b", "#4c956c"],
+)
+ratio_fig.update_layout(height=300, margin=dict(l=10, r=10, t=60, b=10))
+ratio_fig.update_xaxes(title="Bill length / flipper length")
+ratio_fig.update_yaxes(title="Count")
+ratio_fig
+```

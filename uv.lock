@@ -1310,6 +1310,19 @@ wheels = [
 ]
 
 [[package]]
+name = "palmerpenguins"
+version = "0.1.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/6c/3d3c177d6a8b02243df2ffe8657898eadc97065401fecbacdcc917a257af/palmerpenguins-0.1.6.tar.gz", hash = "sha256:9b5193e5c49a7f697ab47635aa3cea036cfc04ae66af992386e86ba89e7456ec", size = 232923, upload-time = "2026-02-01T21:32:43.323Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/9e/7579e7f1ace559be76984107d9e056377993a787eb1fd557a098c32967bc/palmerpenguins-0.1.6-py3-none-any.whl", hash = "sha256:5c3be9af84dd703a25f1aaeadeac6ac770cfd38c1620d00089f581c023129ee0", size = 18878, upload-time = "2026-02-01T21:32:42.165Z" },
+]
+
+[[package]]
 name = "pandas"
 version = "3.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1712,6 +1725,7 @@ dependencies = [
     { name = "jupyter" },
     { name = "matplotlib" },
     { name = "numpy" },
+    { name = "palmerpenguins" },
     { name = "pandas" },
     { name = "plotly" },
 ]
@@ -1721,6 +1735,7 @@ requires-dist = [
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "matplotlib", specifier = ">=3.10.9" },
     { name = "numpy", specifier = ">=2.4.4" },
+    { name = "palmerpenguins", specifier = ">=0.1.4" },
     { name = "pandas", specifier = ">=3.0.2" },
     { name = "plotly", specifier = ">=6.7.0" },
 ]

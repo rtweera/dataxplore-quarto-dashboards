@@ -1,0 +1,596 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "title: \"Palmer Penguins Dashboard\"\n",
+        "subtitle: \"A modern view of species, morphology, and habitat patterns\"\n",
+        "format:\n",
+        "  dashboard:\n",
+        "    theme: flatly\n",
+        "jupyter: dataxplore-venv\n",
+        "execute:\n",
+        "  warning: false\n",
+        "  message: false\n",
+        "---\n",
+        "\n",
+        "<style>\n",
+        ":root {\n",
+        "\t--dashboard-bg: #f4f7fb;\n",
+        "\t--dashboard-panel: rgba(255, 255, 255, 0.92);\n",
+        "\t--dashboard-panel-border: rgba(20, 45, 65, 0.09);\n",
+        "\t--dashboard-ink: #15202b;\n",
+        "\t--dashboard-muted: #5e6b78;\n",
+        "\t--dashboard-accent: #2a6f97;\n",
+        "\t--dashboard-accent-2: #f28f3b;\n",
+        "\t--dashboard-accent-3: #4c956c;\n",
+        "}\n",
+        "\n",
+        "body {\n",
+        "\tbackground:\n",
+        "\t\tradial-gradient(circle at top left, rgba(42, 111, 151, 0.10), transparent 30%),\n",
+        "\t\tradial-gradient(circle at top right, rgba(76, 149, 108, 0.10), transparent 28%),\n",
+        "\t\tlinear-gradient(180deg, #f7f9fc 0%, var(--dashboard-bg) 100%);\n",
+        "\tcolor: var(--dashboard-ink);\n",
+        "}\n",
+        "\n",
+        ".quarto-dashboard main {\n",
+        "\tpadding-top: 1rem;\n",
+        "}\n",
+        "\n",
+        ".quarto-dashboard .card {\n",
+        "\tborder: 1px solid var(--dashboard-panel-border);\n",
+        "\tborder-radius: 20px;\n",
+        "\tbox-shadow: 0 14px 40px rgba(30, 50, 70, 0.08);\n",
+        "\tbackground: var(--dashboard-panel);\n",
+        "\tbackdrop-filter: blur(8px);\n",
+        "}\n",
+        "\n",
+        ".quarto-dashboard .card-body {\n",
+        "\tpadding: 1rem 1.1rem;\n",
+        "}\n",
+        "\n",
+        ".quarto-dashboard h1,\n",
+        ".quarto-dashboard h2,\n",
+        ".quarto-dashboard h3 {\n",
+        "\tletter-spacing: -0.02em;\n",
+        "}\n",
+        "\n",
+        ".hero {\n",
+        "\tpadding: 1.2rem 1.4rem;\n",
+        "\tborder-radius: 24px;\n",
+        "\tbackground: linear-gradient(135deg, rgba(42, 111, 151, 0.95), rgba(76, 149, 108, 0.92));\n",
+        "\tcolor: white;\n",
+        "\tbox-shadow: 0 18px 46px rgba(20, 50, 70, 0.18);\n",
+        "}\n",
+        "\n",
+        ".hero h1 {\n",
+        "\tmargin: 0;\n",
+        "\tfont-size: 2.1rem;\n",
+        "\tfont-weight: 800;\n",
+        "}\n",
+        "\n",
+        ".hero p {\n",
+        "\tmargin: 0.35rem 0 0;\n",
+        "\tmax-width: 58rem;\n",
+        "\tcolor: rgba(255, 255, 255, 0.90);\n",
+        "\tfont-size: 1.02rem;\n",
+        "}\n",
+        "\n",
+        ".hero .tag {\n",
+        "\tdisplay: inline-block;\n",
+        "\tmargin-top: 0.85rem;\n",
+        "\tpadding: 0.3rem 0.7rem;\n",
+        "\tborder-radius: 999px;\n",
+        "\tbackground: rgba(255, 255, 255, 0.16);\n",
+        "\tcolor: rgba(255, 255, 255, 0.95);\n",
+        "\tfont-size: 0.82rem;\n",
+        "\tletter-spacing: 0.04em;\n",
+        "\ttext-transform: uppercase;\n",
+        "}\n",
+        "\n",
+        ".section-note {\n",
+        "\tcolor: var(--dashboard-muted);\n",
+        "\tfont-size: 0.96rem;\n",
+        "\tmargin-top: 0.25rem;\n",
+        "}\n",
+        "</style>"
+      ],
+      "id": "0230a208"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "import plotly.express as px\n",
+        "import plotly.graph_objects as go\n",
+        "from plotly.subplots import make_subplots\n",
+        "from palmerpenguins import load_penguins\n",
+        "\n",
+        "px.defaults.template = \"simple_white\"\n",
+        "px.defaults.color_discrete_sequence = [\"#2a6f97\", \"#f28f3b\", \"#4c956c\", \"#c8553d\"]\n",
+        "\n",
+        "penguins = load_penguins().copy()\n",
+        "penguins = penguins.dropna(subset=[\n",
+        "\t\t\"species\",\n",
+        "\t\t\"island\",\n",
+        "\t\t\"bill_length_mm\",\n",
+        "\t\t\"bill_depth_mm\",\n",
+        "\t\t\"flipper_length_mm\",\n",
+        "\t\t\"body_mass_g\",\n",
+        "\t\t\"sex\",\n",
+        "\t\t\"year\",\n",
+        "])\n",
+        "\n",
+        "penguins[\"species\"] = pd.Categorical(\n",
+        "\t\tpenguins[\"species\"],\n",
+        "\t\tcategories=[\"Adelie\", \"Chinstrap\", \"Gentoo\"],\n",
+        "\t\tordered=True,\n",
+        ")\n",
+        "penguins[\"island\"] = pd.Categorical(\n",
+        "\t\tpenguins[\"island\"],\n",
+        "\t\tcategories=[\"Biscoe\", \"Dream\", \"Torgersen\"],\n",
+        "\t\tordered=True,\n",
+        ")\n",
+        "penguins[\"sex\"] = pd.Categorical(penguins[\"sex\"], categories=[\"female\", \"male\"], ordered=True)\n",
+        "\n",
+        "species_counts = penguins[\"species\"].value_counts().reindex([\"Adelie\", \"Chinstrap\", \"Gentoo\"])\n",
+        "island_counts = penguins[\"island\"].value_counts().reindex([\"Biscoe\", \"Dream\", \"Torgersen\"])\n",
+        "missing_counts = load_penguins().isna().sum().sort_values(ascending=False)\n",
+        "\n",
+        "summary = {\n",
+        "\t\t\"records\": len(penguins),\n",
+        "\t\t\"species\": penguins[\"species\"].nunique(),\n",
+        "\t\t\"islands\": penguins[\"island\"].nunique(),\n",
+        "\t\t\"avg_mass\": penguins[\"body_mass_g\"].mean(),\n",
+        "\t\t\"avg_flipper\": penguins[\"flipper_length_mm\"].mean(),\n",
+        "}\n",
+        "\n",
+        "species_year = (\n",
+        "\t\tpenguins.groupby([\"year\", \"species\"], observed=False)[\"body_mass_g\"]\n",
+        "\t\t.mean()\n",
+        "\t\t.reset_index()\n",
+        ")\n",
+        "\n",
+        "correlation = penguins[\n",
+        "\t\t[\"bill_length_mm\", \"bill_depth_mm\", \"flipper_length_mm\", \"body_mass_g\"]\n",
+        "].corr()\n",
+        "\n",
+        "species_island = (\n",
+        "\t\tpenguins.groupby([\"species\", \"island\"], observed=False)\n",
+        "\t\t.size()\n",
+        "\t\t.reset_index(name=\"count\")\n",
+        ")\n",
+        "\n",
+        "species_sex = (\n",
+        "\t\tpenguins.groupby([\"species\", \"sex\"], observed=False)\n",
+        "\t\t.size()\n",
+        "\t\t.reset_index(name=\"count\")\n",
+        ")\n",
+        "\n",
+        "ratio = penguins.assign(\n",
+        "\t\tbill_to_flipper=penguins[\"bill_length_mm\"] / penguins[\"flipper_length_mm\"]\n",
+        ")"
+      ],
+      "id": "27eb0bd0",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "<div class=\"hero\">\n",
+        "<h1>Palmer Penguins Dashboard</h1>\n",
+        "<p>Explore species composition, body morphology, island distribution, and relationships among the core Palmer Penguins measurements.</p>\n",
+        "<span class=\"tag\">Interactive • Clean • Data-driven</span>\n",
+        "</div>\n",
+        "\n",
+        "## Overview\n",
+        "\n",
+        "### Column 1"
+      ],
+      "id": "79e63d3c"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "def indicator_card(value, title, suffix=\"\", color=\"#2a6f97\"):\n",
+        "\t\tfig = go.Figure(\n",
+        "\t\t\t\tgo.Indicator(\n",
+        "\t\t\t\t\t\tmode=\"number\",\n",
+        "\t\t\t\t\t\tvalue=value,\n",
+        "\t\t\t\t\t\tnumber={\"suffix\": suffix, \"font\": {\"size\": 40, \"color\": color}},\n",
+        "\t\t\t\t\t\ttitle={\"text\": title, \"font\": {\"size\": 15, \"color\": \"#4e5d6c\"}},\n",
+        "\t\t\t\t)\n",
+        "\t\t)\n",
+        "\t\tfig.update_layout(\n",
+        "\t\t\t\theight=180,\n",
+        "\t\t\t\tmargin=dict(l=12, r=12, t=20, b=12),\n",
+        "\t\t\t\tpaper_bgcolor=\"rgba(0,0,0,0)\",\n",
+        "\t\t\t\tplot_bgcolor=\"rgba(0,0,0,0)\",\n",
+        "\t\t)\n",
+        "\t\treturn fig\n",
+        "\n",
+        "indicator_card(summary[\"records\"], \"Clean records\", color=\"#2a6f97\")"
+      ],
+      "id": "fb17939a",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Column 2"
+      ],
+      "id": "e7f95fa1"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "indicator_card(summary[\"species\"], \"Species\", color=\"#4c956c\")"
+      ],
+      "id": "c900c36f",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Column 3"
+      ],
+      "id": "2fe81f63"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "indicator_card(summary[\"islands\"], \"Islands\", color=\"#f28f3b\")"
+      ],
+      "id": "982699de",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Column 4"
+      ],
+      "id": "9bc0553d"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "indicator_card(summary[\"avg_mass\"], \"Mean body mass\", suffix=\" g\", color=\"#c8553d\")"
+      ],
+      "id": "2cb9d598",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Species and habitat\n",
+        "\n",
+        "### Column 1"
+      ],
+      "id": "b6cc807b"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fig = px.bar(\n",
+        "\t\tspecies_counts.reset_index(),\n",
+        "\t\tx=\"species\",\n",
+        "\t\ty=\"count\",\n",
+        "\t\ttext=\"count\",\n",
+        "\t\tcolor=\"species\",\n",
+        "\t\tcolor_discrete_sequence=[\"#2a6f97\", \"#f28f3b\", \"#4c956c\"],\n",
+        "\t\ttitle=\"Species composition\"\n",
+        ")\n",
+        "fig.update_traces(textposition=\"outside\", cliponaxis=False)\n",
+        "fig.update_layout(\n",
+        "\t\theight=360,\n",
+        "\t\txaxis_title=\"\",\n",
+        "\t\tyaxis_title=\"Count\",\n",
+        "\t\tshowlegend=False,\n",
+        "\t\tmargin=dict(l=10, r=10, t=60, b=10),\n",
+        ")\n",
+        "fig"
+      ],
+      "id": "b606d12d",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Column 2"
+      ],
+      "id": "fc90451d"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "species_island_plot = species_island.assign(\n",
+        "    species=species_island[\"species\"].astype(str),\n",
+        "    island=species_island[\"island\"].astype(str),\n",
+        ")\n",
+        "\n",
+        "fig = px.treemap(\n",
+        "\t\tspecies_island_plot,\n",
+        "\t\tpath=[px.Constant(\"Penguins\"), \"species\", \"island\"],\n",
+        "\t\tvalues=\"count\",\n",
+        "\t\tcolor=\"species\",\n",
+        "\t\tcolor_discrete_sequence=[\"#2a6f97\", \"#f28f3b\", \"#4c956c\"],\n",
+        "\t\ttitle=\"Species and island footprint\"\n",
+        ")\n",
+        "fig.update_layout(height=360, margin=dict(l=10, r=10, t=60, b=10))\n",
+        "fig"
+      ],
+      "id": "ee57f5cf",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Column 3"
+      ],
+      "id": "dfd0efc9"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fig = px.bar(\n",
+        "\t\tspecies_sex,\n",
+        "\t\tx=\"species\",\n",
+        "\t\ty=\"count\",\n",
+        "\t\tcolor=\"sex\",\n",
+        "\t\tbarmode=\"group\",\n",
+        "\t\tcolor_discrete_map={\"female\": \"#f28f3b\", \"male\": \"#2a6f97\"},\n",
+        "\t\ttitle=\"Sex balance by species\"\n",
+        ")\n",
+        "fig.update_layout(height=360, margin=dict(l=10, r=10, t=60, b=10), legend_title_text=\"sex\")\n",
+        "fig"
+      ],
+      "id": "fdc65b38",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Morphology\n",
+        "\n",
+        "### Column 1"
+      ],
+      "id": "fee6be7c"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fig = px.scatter(\n",
+        "\t\tpenguins,\n",
+        "\t\tx=\"bill_length_mm\",\n",
+        "\t\ty=\"bill_depth_mm\",\n",
+        "\t\tcolor=\"species\",\n",
+        "\t\tsymbol=\"sex\",\n",
+        "\t\tsize=\"body_mass_g\",\n",
+        "\t\tsize_max=20,\n",
+        "\t\topacity=0.82,\n",
+        "\t\tmarginal_x=\"histogram\",\n",
+        "\t\tmarginal_y=\"histogram\",\n",
+        "\t\ttitle=\"Bill length vs bill depth\"\n",
+        ")\n",
+        "fig.update_layout(height=430, margin=dict(l=10, r=10, t=60, b=10))\n",
+        "fig.update_xaxes(title=\"Bill length (mm)\")\n",
+        "fig.update_yaxes(title=\"Bill depth (mm)\")\n",
+        "fig"
+      ],
+      "id": "6f4fc904",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Column 2"
+      ],
+      "id": "7e3dc530"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fig = px.box(\n",
+        "\t\tpenguins,\n",
+        "\t\tx=\"species\",\n",
+        "\t\ty=\"body_mass_g\",\n",
+        "\t\tcolor=\"species\",\n",
+        "\t\tpoints=\"all\",\n",
+        "\t\ttitle=\"Body mass distribution by species\",\n",
+        "\t\tcolor_discrete_sequence=[\"#2a6f97\", \"#f28f3b\", \"#4c956c\"],\n",
+        ")\n",
+        "fig.update_layout(height=430, margin=dict(l=10, r=10, t=60, b=10), showlegend=False)\n",
+        "fig.update_yaxes(title=\"Body mass (g)\")\n",
+        "fig"
+      ],
+      "id": "bbe899ac",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Time and relationships\n",
+        "\n",
+        "### Column 1"
+      ],
+      "id": "e688a487"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fig = px.line(\n",
+        "\t\tspecies_year,\n",
+        "\t\tx=\"year\",\n",
+        "\t\ty=\"body_mass_g\",\n",
+        "\t\tcolor=\"species\",\n",
+        "\t\tmarkers=True,\n",
+        "\t\ttitle=\"Average body mass over time\",\n",
+        "\t\tcolor_discrete_sequence=[\"#2a6f97\", \"#f28f3b\", \"#4c956c\"],\n",
+        ")\n",
+        "fig.update_layout(height=340, margin=dict(l=10, r=10, t=60, b=10))\n",
+        "fig.update_yaxes(title=\"Mean body mass (g)\")\n",
+        "fig"
+      ],
+      "id": "6e4ac844",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Column 2"
+      ],
+      "id": "942add50"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fig = px.imshow(\n",
+        "\t\tcorrelation.round(2),\n",
+        "\t\ttext_auto=True,\n",
+        "\t\tcolor_continuous_scale=[\"#e8f1f8\", \"#8ecae6\", \"#2a6f97\"],\n",
+        "\t\ttitle=\"Measurement correlation matrix\",\n",
+        ")\n",
+        "fig.update_layout(height=340, margin=dict(l=10, r=10, t=60, b=10))\n",
+        "fig"
+      ],
+      "id": "70502e65",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Column 3"
+      ],
+      "id": "fd1e0e47"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "fig = px.histogram(\n",
+        "\t\tpenguins,\n",
+        "\t\tx=\"flipper_length_mm\",\n",
+        "\t\tcolor=\"species\",\n",
+        "\t\tbarmode=\"overlay\",\n",
+        "\t\topacity=0.58,\n",
+        "\t\tnbins=24,\n",
+        "\t\ttitle=\"Flipper length distribution\",\n",
+        "\t\tcolor_discrete_sequence=[\"#2a6f97\", \"#f28f3b\", \"#4c956c\"],\n",
+        ")\n",
+        "fig.update_layout(height=340, margin=dict(l=10, r=10, t=60, b=10))\n",
+        "fig.update_xaxes(title=\"Flipper length (mm)\")\n",
+        "fig.update_yaxes(title=\"Count\")\n",
+        "fig"
+      ],
+      "id": "4ccfc6dd",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## Data quality and derived signal\n",
+        "\n",
+        "### Column 1"
+      ],
+      "id": "bc1a756c"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "quality = pd.DataFrame({\n",
+        "\t\t\"missing_values\": missing_counts,\n",
+        "\t\t\"missing_pct\": (missing_counts / len(load_penguins()) * 100).round(1),\n",
+        "})\n",
+        "quality = quality[quality[\"missing_values\"] > 0]\n",
+        "quality.index.name = \"field\"\n",
+        "quality"
+      ],
+      "id": "7d0b2071",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "### Column 2"
+      ],
+      "id": "fd1bd6b5"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "ratio_fig = px.histogram(\n",
+        "\t\tratio,\n",
+        "\t\tx=\"bill_to_flipper\",\n",
+        "\t\tcolor=\"species\",\n",
+        "\t\tnbins=26,\n",
+        "\t\topacity=0.7,\n",
+        "\t\ttitle=\"Bill-to-flipper ratio\",\n",
+        "\t\tcolor_discrete_sequence=[\"#2a6f97\", \"#f28f3b\", \"#4c956c\"],\n",
+        ")\n",
+        "ratio_fig.update_layout(height=300, margin=dict(l=10, r=10, t=60, b=10))\n",
+        "ratio_fig.update_xaxes(title=\"Bill length / flipper length\")\n",
+        "ratio_fig.update_yaxes(title=\"Count\")\n",
+        "ratio_fig"
+      ],
+      "id": "0e782790",
+      "execution_count": null,
+      "outputs": []
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "name": "dataxplore-venv",
+      "language": "python",
+      "display_name": "Python (dataxplore-venv)",
+      "path": "C:\\Users\\HP\\AppData\\Roaming\\jupyter\\kernels\\dataxplore-venv"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}
